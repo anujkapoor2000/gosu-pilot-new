@@ -503,9 +503,7 @@ setMessages(newMessages.concat({
   tokens: tokens
 }));
 
-      var data = await res.json();
-      var replyText = (data.content && data.content[0] && data.content[0].text) || "No response received.";
-      var tokens = data.usage ? (data.usage.input_tokens + data.usage.output_tokens) : null;
+ 
 
       setMessages(newMessages.concat({
         role:"assistant", content:replyText, id:Date.now()+1,
