@@ -467,15 +467,41 @@ export default function App() {
       });
 
       var res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
-          max_tokens: 2000,
-          system: SYSTEM_PROMPT,
-          messages: apiMessages
-        })
-      });
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 2000,
+    system: SYSTEM_PROMPT,
+    messages: apiMessages
+  })
+});
+
+var data = await res.json();
+
+if (!res.ok) {
+  throw new Error(
+    data?.error?.message ||
+    data?.error ||
+    "Request failed"
+  );
+}
+
+var replyText =
+  data?.content?.find(function(block) {
+    return block.type === "text";
+  })?.text || "No response received.";
+
+var tokens = data.usage
+  ? (data.usage.input_tokens + data.usage.output_tokens)
+  : null;
+
+setMessages(newMessages.concat({
+  role: "assistant",
+  content: replyText,
+  id: Date.now() + 1,
+  tokens: tokens
+}));
 
       var data = await res.json();
       var replyText = (data.content && data.content[0] && data.content[0].text) || "No response received.";
