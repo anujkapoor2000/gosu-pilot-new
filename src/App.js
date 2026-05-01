@@ -468,20 +468,6 @@ function SnippetCard(props) {
   );
 }
 
-// ── NTT DATA Logo ─────────────────────────────────────────────────────────────
-function NTTDataLogo() {
-  return (
-    <div style={{ display:"flex", alignItems:"center", gap:0, userSelect:"none" }}>
-      <span style={{ fontFamily:"Arial Black, Arial, sans-serif", fontWeight:900,
-        fontSize:17, color:WHITE, letterSpacing:"0.5px" }}>NTT</span>
-      <span style={{ fontFamily:"Arial Black, Arial, sans-serif", fontWeight:900,
-        fontSize:17, color:WHITE, letterSpacing:"0.5px", marginLeft:4 }}>DATA</span>
-      <div style={{ width:5, height:5, borderRadius:"50%", background:RED,
-        marginLeft:3, flexShrink:0, boxShadow:"0 0 4px "+RED }} />
-    </div>
-  );
-}
-
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   var [messages, setMessages]           = useState([]);
@@ -615,8 +601,6 @@ export default function App() {
             onMouseLeave={function(e){ e.currentTarget.style.color="rgba(255,255,255,0.65)"; }}>
             ☰
           </button>
-
-          <NTTDataLogo />
 
           <div style={{ width:1, height:28, background:"rgba(255,255,255,0.18)" }} />
 
