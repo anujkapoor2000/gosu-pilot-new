@@ -1,24 +1,36 @@
 import { useState, useRef, useEffect } from "react";
 /* eslint-disable no-useless-escape */
 
-// ── Design tokens – dark IDE theme ───────────────────────────────────────────
-var BG0      = "#0D1117";   // deepest background
-var BG1      = "#161B22";   // panel background
-var BG2      = "#21262D";   // card / input background
-var BG3      = "#30363D";   // border / hover
-var TEAL     = "#00D4AA";   // primary accent
-var BLUE     = "#003087";   // NTT blue
-var RED      = "#E4002B";   // NTT red
-var YELLOW   = "#E3B341";   // warning / keyword
-var PURPLE   = "#C792EA";   // type tokens
-var GREEN    = "#3FB950";   // success / strings
-var ORANGE   = "#F0883E";   // numbers
-var COMMENT  = "#8B949E";   // comments / muted
-var FG0      = "#E6EDF3";   // primary text
-var FG1      = "#B1BAC4";   // secondary text
-var FG2      = "#8B949E";   // muted text
-var MONO     = "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace";
-var SANS     = "'Syne', 'Segoe UI', system-ui, sans-serif";
+// ── NTT DATA Design System ─────────────────────────────────────────────────────
+var NAVY       = "#003087";   // NTT DATA primary navy
+var NAVY_DARK  = "#002060";   // hover / pressed
+var NAVY_LIGHT = "#EEF2F9";   // navy tint backgrounds
+var NAVY_MID   = "#1B4BA0";   // mid-range navy
+var RED        = "#E4002B";   // NTT DATA accent red
+var RED_LIGHT  = "#FEF2F4";   // red tint
+var WHITE      = "#FFFFFF";
+var GRAY_50    = "#F9FAFB";
+var GRAY_100   = "#F3F4F6";
+var GRAY_200   = "#E5E7EB";
+var GRAY_300   = "#D1D5DB";
+var GRAY_400   = "#9CA3AF";
+var GRAY_500   = "#6B7280";
+var GRAY_700   = "#374151";
+var GRAY_900   = "#111827";
+var SUCCESS    = "#16A34A";
+
+// Syntax highlight palette (used on dark code block backgrounds)
+var SYN_GREEN  = "#3FB950";
+var SYN_YELLOW = "#E3B341";
+var SYN_PURPLE = "#C792EA";
+var SYN_ORANGE = "#F0883E";
+var SYN_TEAL   = "#00D4AA";
+var SYN_CMT    = "#8B949E";
+var CODE_BG    = "#0D1117";
+var CODE_FG    = "#E6EDF3";
+
+var MONO = "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace";
+var SANS = "'Inter', 'Segoe UI', system-ui, sans-serif";
 
 // ── Gosu system prompt ────────────────────────────────────────────────────────
 var SYSTEM_PROMPT = `You are Gosu Copilot, an elite AI coding assistant built by NTT DATA, fine-tuned exclusively on Guidewire InsuranceSuite Gosu code, patterns, and idioms.
@@ -255,33 +267,25 @@ function highlightGosu(code) {
   var lines = code.split("\n");
   return lines.map(function(line) {
     var isComment = line.trim().startsWith("//") || line.trim().startsWith("*") || line.trim().startsWith("/*");
-    if (isComment) return '<span style="color:' + COMMENT + ';font-style:italic">' + escHtml(line) + '</span>';
+    if (isComment) return '<span style="color:' + SYN_CMT + ';font-style:italic">' + escHtml(line) + '</span>';
 
     var escaped = escHtml(line);
 
-    // strings
-    escaped = escaped.replace(/(&quot;[^&]*&quot;)/g, '<span style="color:' + GREEN + '">$1</span>');
+    escaped = escaped.replace(/(&quot;[^&]*&quot;)/g, '<span style="color:' + SYN_GREEN + '">$1</span>');
+    escaped = escaped.replace(/\b(\d+(?:\.\d+)?(?:bd|d|f|l)?)\b/g, '<span style="color:' + SYN_ORANGE + '">$1</span>');
 
-    // numbers
-    escaped = escaped.replace(/\b(\d+(?:\.\d+)?(?:bd|d|f|l)?)\b/g, '<span style="color:' + ORANGE + '">$1</span>');
-
-    // keywords
     keywords.forEach(function(kw) {
       var re = new RegExp("\\b(" + kw + ")\\b", "g");
-      escaped = escaped.replace(re, '<span style="color:' + YELLOW + ';font-weight:600">$1</span>');
+      escaped = escaped.replace(re, '<span style="color:' + SYN_YELLOW + ';font-weight:600">$1</span>');
     });
 
-    // types / GW entities
     types.forEach(function(t) {
       var re = new RegExp("\\b(" + t + ")\\b", "g");
-      escaped = escaped.replace(re, '<span style="color:' + PURPLE + '">$1</span>');
+      escaped = escaped.replace(re, '<span style="color:' + SYN_PURPLE + '">$1</span>');
     });
 
-    // annotations
-    escaped = escaped.replace(/(@\w+)/g, '<span style="color:' + TEAL + '">$1</span>');
-
-    // lambdas / closures
-    escaped = escaped.replace(/(\\[^)]*-&gt;)/g, '<span style="color:' + TEAL + '">$1</span>');
+    escaped = escaped.replace(/(@\w+)/g, '<span style="color:' + SYN_TEAL + '">$1</span>');
+    escaped = escaped.replace(/(\\[^)]*-&gt;)/g, '<span style="color:' + SYN_TEAL + '">$1</span>');
 
     return escaped;
   }).join("\n");
@@ -310,6 +314,7 @@ function renderMessageContent(text) {
   return parts;
 }
 
+// ── Code block ────────────────────────────────────────────────────────────────
 function CodeBlock(props) {
   var [copied, setCopied] = useState(false);
   function copy() {
@@ -323,63 +328,73 @@ function CodeBlock(props) {
   var highlighted = isGosu || isPcf ? highlightGosu(props.code) : escHtml(props.code);
 
   return (
-    <div style={{ borderRadius:8, overflow:"hidden", border:"1px solid "+BG3, marginTop:8, marginBottom:8 }}>
-      <div style={{ background:BG3, padding:"6px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <span style={{ fontSize:11, color:FG2, fontFamily:MONO }}>
-          {isPcf ? "pcf / xml" : isGosu ? "gosu" : props.lang}
-        </span>
+    <div style={{ borderRadius:6, overflow:"hidden", border:"1px solid "+GRAY_200, marginTop:12, marginBottom:12, boxShadow:"0 2px 8px rgba(0,0,0,0.10)" }}>
+      <div style={{ background:"#161B22", padding:"8px 16px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:"1px solid #30363D" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <div style={{ width:8, height:8, borderRadius:"50%", background:RED, opacity:0.9 }} />
+          <span style={{ fontSize:11, color:SYN_CMT, fontFamily:MONO }}>
+            {isPcf ? "pcf / xml" : isGosu ? "gosu" : props.lang}
+          </span>
+        </div>
         <button onClick={copy}
-          style={{ background:"transparent", border:"1px solid "+BG3, borderRadius:5,
-            padding:"2px 10px", cursor:"pointer", fontSize:11,
-            color: copied ? TEAL : FG2, transition:"color 0.2s" }}>
+          style={{ background:"transparent", border:"1px solid #30363D", borderRadius:4,
+            padding:"3px 10px", cursor:"pointer", fontSize:11,
+            color: copied ? SYN_TEAL : SYN_CMT, transition:"color 0.2s", fontFamily:MONO }}>
           {copied ? "✓ Copied" : "Copy"}
         </button>
       </div>
-      <div style={{ background:"#0A0E14", padding:"16px", overflowX:"auto" }}>
-        <pre style={{ margin:0, fontFamily:MONO, fontSize:13, lineHeight:1.65, color:FG0 }}
+      <div style={{ background:CODE_BG, padding:"16px", overflowX:"auto" }}>
+        <pre style={{ margin:0, fontFamily:MONO, fontSize:13, lineHeight:1.65, color:CODE_FG }}
           dangerouslySetInnerHTML={{ __html: highlighted }} />
       </div>
     </div>
   );
 }
 
+// ── Message bubble ────────────────────────────────────────────────────────────
 function MessageBubble(props) {
   var msg = props.msg;
   var isUser = msg.role === "user";
   var parts = renderMessageContent(msg.content);
 
   return (
-    <div style={{ display:"flex", gap:12, marginBottom:20,
+    <div style={{ display:"flex", gap:14, marginBottom:24,
       flexDirection: isUser ? "row-reverse" : "row", alignItems:"flex-start" }}>
-      <div style={{ width:34, height:34, borderRadius:"50%", flexShrink:0,
+      <div style={{ width:36, height:36, borderRadius:8, flexShrink:0,
         display:"flex", alignItems:"center", justifyContent:"center",
-        background: isUser ? BG3 : TEAL+"22", border:"1px solid "+(isUser?BG3:TEAL+"50"),
-        fontSize:14 }}>
-        {isUser ? "👤" : "⚡"}
+        background: isUser ? GRAY_200 : NAVY,
+        color: isUser ? GRAY_700 : WHITE,
+        fontSize:11, fontWeight:700, fontFamily:SANS, letterSpacing:0.3 }}>
+        {isUser ? "YOU" : "GC"}
       </div>
       <div style={{ maxWidth:"78%", minWidth:0 }}>
-        <div style={{ fontSize:10, fontWeight:700, color:FG2, marginBottom:5, fontFamily:MONO,
+        <div style={{ fontSize:11, fontWeight:600,
+          color: isUser ? GRAY_400 : NAVY,
+          marginBottom:6, fontFamily:SANS, letterSpacing:0.5, textTransform:"uppercase",
           textAlign: isUser ? "right" : "left" }}>
-          {isUser ? "YOU" : "GOSU COPILOT"}
+          {isUser ? "You" : "Gosu Copilot"}
         </div>
-        <div style={{ background: isUser ? BG2 : BG1,
-          border:"1px solid "+(isUser?BG3:BG3),
-          borderRadius: isUser ? "12px 4px 12px 12px" : "4px 12px 12px 12px",
-          padding:"12px 16px" }}>
+        <div style={{
+          background: isUser ? NAVY_LIGHT : WHITE,
+          border:"1px solid "+(isUser ? "#C7D5EC" : GRAY_200),
+          borderLeft: isUser ? "1px solid #C7D5EC" : "3px solid "+RED,
+          borderRadius: isUser ? "8px 0 8px 8px" : "0 8px 8px 8px",
+          padding:"14px 18px",
+          boxShadow: isUser ? "none" : "0 2px 8px rgba(0,48,135,0.07)" }}>
           {parts.map(function(part, i) {
             if (part.type === "code") {
               return <CodeBlock key={i} code={part.content} lang={part.lang} />;
             }
             return (
-              <div key={i} style={{ fontSize:13, color:FG0, lineHeight:1.7,
-                whiteSpace:"pre-wrap", fontFamily: part.content.includes("```") ? MONO : "inherit" }}>
+              <div key={i} style={{ fontSize:14, color:GRAY_900, lineHeight:1.75,
+                whiteSpace:"pre-wrap", fontFamily:SANS }}>
                 {part.content}
               </div>
             );
           })}
         </div>
         {msg.tokens && (
-          <div style={{ fontSize:10, color:FG2, marginTop:4, fontFamily:MONO,
+          <div style={{ fontSize:10, color:GRAY_400, marginTop:4, fontFamily:MONO,
             textAlign: isUser ? "right" : "left" }}>
             {msg.tokens} tokens
           </div>
@@ -393,38 +408,57 @@ function MessageBubble(props) {
 function SnippetCard(props) {
   var s = props.snippet;
   var [expanded, setExpanded] = useState(false);
-  var catColors = {
-    Patterns: TEAL, "Query API": BLUE+"cc", Enhancement: PURPLE,
-    Rules: YELLOW, PCF: ORANGE, Integration: GREEN, Cloud: RED
+  var catColor = {
+    Patterns: NAVY, "Query API": "#0891B2", Enhancement: "#7C3AED",
+    Rules: "#D97706", PCF: "#EA580C", Integration: SUCCESS, Cloud: RED
+  };
+  var catBg = {
+    Patterns: NAVY_LIGHT, "Query API": "#E0F2FE", Enhancement: "#EDE9FE",
+    Rules: "#FFFBEB", PCF: "#FFF7ED", Integration: "#F0FDF4", Cloud: RED_LIGHT
   };
   return (
-    <div style={{ background:BG2, borderRadius:10, border:"1px solid "+BG3,
-      marginBottom:10, overflow:"hidden", cursor:"pointer" }}
+    <div style={{ background:WHITE, borderRadius:8, border:"1px solid "+GRAY_200,
+      marginBottom:12, overflow:"hidden", cursor:"pointer",
+      boxShadow:"0 1px 4px rgba(0,0,0,0.06)", transition:"box-shadow 0.2s" }}
+      onMouseEnter={function(e){ e.currentTarget.style.boxShadow="0 4px 16px rgba(0,48,135,0.10)"; }}
+      onMouseLeave={function(e){ e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,0.06)"; }}
       onClick={function(){ setExpanded(!expanded); }}>
-      <div style={{ padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+      <div style={{ padding:"14px 18px", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
-            <span style={{ fontSize:9, fontWeight:700, padding:"1px 7px", borderRadius:3,
-              background:(catColors[s.category]||TEAL)+"22",
-              color:catColors[s.category]||TEAL, fontFamily:MONO }}>{s.category}</span>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+            <span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4,
+              background: catBg[s.category] || NAVY_LIGHT,
+              color: catColor[s.category] || NAVY,
+              fontFamily:MONO, textTransform:"uppercase", letterSpacing:0.5 }}>
+              {s.category}
+            </span>
           </div>
-          <div style={{ fontSize:12, fontWeight:700, color:FG0, marginBottom:2 }}>{s.title}</div>
-          <div style={{ fontSize:11, color:FG2 }}>{s.desc}</div>
+          <div style={{ fontSize:13, fontWeight:700, color:GRAY_900, marginBottom:3 }}>{s.title}</div>
+          <div style={{ fontSize:12, color:GRAY_500 }}>{s.desc}</div>
         </div>
-        <div style={{ color:FG2, fontSize:12, marginTop:2, flexShrink:0, marginLeft:8 }}>{expanded?"▲":"▼"}</div>
+        <div style={{ color:GRAY_400, fontSize:12, marginTop:2, flexShrink:0, marginLeft:12 }}>
+          {expanded ? "▲" : "▼"}
+        </div>
       </div>
       {expanded && (
-        <div style={{ borderTop:"1px solid "+BG3 }} onClick={function(e){e.stopPropagation();}}>
-          <CodeBlock code={s.code} lang="gosu" />
-          <div style={{ padding:"8px 14px", display:"flex", gap:8 }}>
+        <div style={{ borderTop:"1px solid "+GRAY_200 }} onClick={function(e){e.stopPropagation();}}>
+          <div style={{ padding:"0 18px" }}>
+            <CodeBlock code={s.code} lang="gosu" />
+          </div>
+          <div style={{ padding:"10px 18px 14px", display:"flex", gap:8, background:GRAY_50, borderTop:"1px solid "+GRAY_200 }}>
             <button onClick={function(){ props.onInsert(s.code); }}
-              style={{ padding:"5px 14px", borderRadius:6, border:"none",
-                background:TEAL+"22", color:TEAL, fontSize:11, fontWeight:700, cursor:"pointer" }}>
+              style={{ padding:"7px 16px", borderRadius:4, border:"none",
+                background:NAVY, color:WHITE, fontSize:12, fontWeight:600, cursor:"pointer",
+                transition:"background 0.15s" }}
+              onMouseEnter={function(e){ e.currentTarget.style.background=NAVY_DARK; }}
+              onMouseLeave={function(e){ e.currentTarget.style.background=NAVY; }}>
               Insert into editor
             </button>
             <button onClick={function(){ props.onAsk("Explain this Gosu pattern:\n\n```gosu\n"+s.code+"\n```"); }}
-              style={{ padding:"5px 14px", borderRadius:6, border:"1px solid "+BG3,
-                background:"transparent", color:FG2, fontSize:11, cursor:"pointer" }}>
+              style={{ padding:"7px 16px", borderRadius:4, border:"1px solid "+GRAY_300,
+                background:WHITE, color:GRAY_700, fontSize:12, cursor:"pointer" }}
+              onMouseEnter={function(e){ e.currentTarget.style.borderColor=NAVY; e.currentTarget.style.color=NAVY; }}
+              onMouseLeave={function(e){ e.currentTarget.style.borderColor=GRAY_300; e.currentTarget.style.color=GRAY_700; }}>
               Ask Copilot to explain
             </button>
           </div>
@@ -434,16 +468,30 @@ function SnippetCard(props) {
   );
 }
 
+// ── NTT DATA Logo ─────────────────────────────────────────────────────────────
+function NTTDataLogo() {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:0, userSelect:"none" }}>
+      <span style={{ fontFamily:"Arial Black, Arial, sans-serif", fontWeight:900,
+        fontSize:17, color:WHITE, letterSpacing:"0.5px" }}>NTT</span>
+      <span style={{ fontFamily:"Arial Black, Arial, sans-serif", fontWeight:900,
+        fontSize:17, color:WHITE, letterSpacing:"0.5px", marginLeft:4 }}>DATA</span>
+      <div style={{ width:5, height:5, borderRadius:"50%", background:RED,
+        marginLeft:3, flexShrink:0, boxShadow:"0 0 4px "+RED }} />
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
-  var [messages, setMessages]       = useState([]);
-  var [input, setInput]             = useState("");
-  var [loading, setLoading]         = useState(false);
-  var [activePanel, setActivePanel] = useState("chat");
-  var [editorCode, setEditorCode]   = useState("// Gosu Copilot — paste or write your Gosu code here\n// Ask the copilot to review, refactor, or extend it\n\npackage extensions\n\nclass MyPolicyExtension {\n\n  function calculateRiskScore(period : PolicyPeriod) : Integer {\n    // TODO: implement risk scoring logic\n    return 0\n  }\n\n}");
+  var [messages, setMessages]           = useState([]);
+  var [input, setInput]                 = useState("");
+  var [loading, setLoading]             = useState(false);
+  var [activePanel, setActivePanel]     = useState("chat");
+  var [editorCode, setEditorCode]       = useState("// Gosu Copilot — paste or write your Gosu code here\n// Ask the copilot to review, refactor, or extend it\n\npackage extensions\n\nclass MyPolicyExtension {\n\n  function calculateRiskScore(period : PolicyPeriod) : Integer {\n    // TODO: implement risk scoring logic\n    return 0\n  }\n\n}");
   var [snippetFilter, setSnippetFilter] = useState("All");
-  var [sidebarOpen, setSidebarOpen] = useState(true);
-  var chatEndRef = useRef(null);
+  var [sidebarOpen, setSidebarOpen]     = useState(true);
+  var chatEndRef  = useRef(null);
   var textareaRef = useRef(null);
 
   useEffect(function() {
@@ -455,7 +503,7 @@ export default function App() {
     if (!userText || loading) return;
     setInput("");
 
-    var userMsg = { role:"user", content:userText, id:Date.now() };
+    var userMsg    = { role:"user", content:userText, id:Date.now() };
     var newMessages = messages.concat(userMsg);
     setMessages(newMessages);
     setLoading(true);
@@ -467,47 +515,32 @@ export default function App() {
       });
 
       var res = await fetch("/api/chat", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 2000,
-    system: SYSTEM_PROMPT,
-    messages: apiMessages
-  })
-});
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 2000,
+          system: SYSTEM_PROMPT,
+          messages: apiMessages
+        })
+      });
 
-var data = await res.json();
+      var data = await res.json();
 
-if (!res.ok) {
-  throw new Error(
-    data?.error?.message ||
-    data?.error ||
-    "Request failed"
-  );
-}
+      if (!res.ok) {
+        throw new Error(data?.error?.message || data?.error || "Request failed");
+      }
 
-var replyText =
-  data?.content?.find(function(block) {
-    return block.type === "text";
-  })?.text || "No response received.";
+      var replyText = data?.content?.find(function(block) {
+        return block.type === "text";
+      })?.text || "No response received.";
 
-var tokens = data.usage
-  ? (data.usage.input_tokens + data.usage.output_tokens)
-  : null;
-
-setMessages(newMessages.concat({
-  role: "assistant",
-  content: replyText,
-  id: Date.now() + 1,
-  tokens: tokens
-}));
-
- 
+      var tokens = data.usage
+        ? (data.usage.input_tokens + data.usage.output_tokens)
+        : null;
 
       setMessages(newMessages.concat({
-        role:"assistant", content:replyText, id:Date.now()+1,
-        tokens:tokens
+        role:"assistant", content:replyText, id:Date.now()+1, tokens:tokens
       }));
     } catch (err) {
       setMessages(newMessages.concat({
@@ -534,63 +567,104 @@ setMessages(newMessages.concat({
   }
 
   function handleKey(e) {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      sendMessage();
-    }
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { sendMessage(); }
   }
 
   var filteredSnippets = SNIPPETS.filter(function(s) {
     return snippetFilter === "All" || s.category === snippetFilter;
   });
 
+  var gwModules = [
+    { label:"PolicyCenter",  icon:"🏛", color:NAVY },
+    { label:"ClaimCenter",   icon:"⚖",  color:"#0891B2" },
+    { label:"BillingCenter", icon:"💳", color:SUCCESS },
+    { label:"PCF / UI",      icon:"🖥",  color:"#EA580C" },
+    { label:"Integration",   icon:"🔗", color:"#7C3AED" },
+    { label:"Cloud Migrate", icon:"☁",  color:RED }
+  ];
+
+  var quickActions = [
+    { label:"Review my code",         icon:"🔍" },
+    { label:"Cloud migration check",  icon:"☁" },
+    { label:"Generate unit tests",    icon:"🧪" },
+    { label:"Fix null pointer risk",  icon:"🛡" },
+    { label:"Explain GW entity",      icon:"📖" },
+  ];
+
+  var panelTabs = [
+    { key:"chat",     label:"Chat",           icon:"💬" },
+    { key:"editor",   label:"Code Editor",    icon:"📝" },
+    { key:"snippets", label:"Snippet Library",icon:"📚" }
+  ];
+
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100vh", background:BG0, color:FG0, fontFamily:SANS }}>
+    <div style={{ display:"flex", flexDirection:"column", height:"100vh", background:GRAY_100, color:GRAY_900, fontFamily:SANS }}>
 
       {/* ── Top bar ── */}
-      <div style={{ height:52, background:BG1, borderBottom:"1px solid "+BG3,
-        display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 20px", flexShrink:0 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-          <button onClick={function(){setSidebarOpen(!sidebarOpen);}}
-            style={{ background:"transparent", border:"none", color:FG2, cursor:"pointer", fontSize:18, lineHeight:1 }}>
+      <div style={{ height:64, background:NAVY, display:"flex", alignItems:"center",
+        justifyContent:"space-between", padding:"0 24px", flexShrink:0,
+        boxShadow:"0 3px 0 0 "+RED }}>
+
+        {/* Left: hamburger + logo + divider + app name + panel tabs */}
+        <div style={{ display:"flex", alignItems:"center", gap:20 }}>
+          <button onClick={function(){ setSidebarOpen(!sidebarOpen); }}
+            style={{ background:"transparent", border:"none", color:"rgba(255,255,255,0.65)",
+              cursor:"pointer", fontSize:20, lineHeight:1, padding:4,
+              borderRadius:4, transition:"color 0.15s" }}
+            onMouseEnter={function(e){ e.currentTarget.style.color=WHITE; }}
+            onMouseLeave={function(e){ e.currentTarget.style.color="rgba(255,255,255,0.65)"; }}>
             ☰
           </button>
-          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <div style={{ width:28, height:28, borderRadius:7, background:TEAL,
-              display:"flex", alignItems:"center", justifyContent:"center", fontSize:14 }}>⚡</div>
-            <div>
-              <div style={{ fontSize:14, fontWeight:800, color:FG0, fontFamily:SANS, letterSpacing:-0.3 }}>
-                Gosu <span style={{ color:TEAL }}>Copilot</span>
-              </div>
-              <div style={{ fontSize:9, color:FG2, fontFamily:MONO, letterSpacing:1 }}>NTT DATA · GUIDEWIRE AI</div>
+
+          <NTTDataLogo />
+
+          <div style={{ width:1, height:28, background:"rgba(255,255,255,0.18)" }} />
+
+          <div>
+            <div style={{ fontSize:15, fontWeight:700, color:WHITE, letterSpacing:-0.3 }}>
+              Gosu Copilot
+            </div>
+            <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", fontFamily:MONO, letterSpacing:1.5, textTransform:"uppercase" }}>
+              Guidewire AI Assistant
             </div>
           </div>
-          <div style={{ width:1, height:24, background:BG3 }} />
-          <div style={{ display:"flex", gap:4 }}>
-            {["chat","editor","snippets"].map(function(p) {
-              var labels = { chat:"Chat", editor:"Code Editor", snippets:"Snippet Library" };
-              var icons  = { chat:"💬", editor:"📝", snippets:"📚" };
-              var active = activePanel === p;
+
+          <div style={{ width:1, height:28, background:"rgba(255,255,255,0.18)" }} />
+
+          <div style={{ display:"flex", gap:2 }}>
+            {panelTabs.map(function(tab) {
+              var active = activePanel === tab.key;
               return (
-                <button key={p} onClick={function(){setActivePanel(p);}}
-                  style={{ padding:"4px 12px", borderRadius:6,
-                    border:"1px solid "+(active?TEAL:BG3),
-                    background:active?TEAL+"18":BG2,
-                    color:active?TEAL:FG2, fontSize:11, fontWeight:active?700:400,
-                    cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}>
-                  <span>{icons[p]}</span>{labels[p]}
+                <button key={tab.key} onClick={function(){ setActivePanel(tab.key); }}
+                  style={{ padding:"7px 16px", borderRadius:5,
+                    border: active ? "none" : "1px solid rgba(255,255,255,0.15)",
+                    background: active ? WHITE : "transparent",
+                    color: active ? NAVY : "rgba(255,255,255,0.75)",
+                    fontSize:12, fontWeight: active ? 700 : 500,
+                    cursor:"pointer", fontFamily:SANS, transition:"all 0.15s",
+                    display:"flex", alignItems:"center", gap:6 }}
+                  onMouseEnter={function(e){
+                    if (!active) { e.currentTarget.style.background="rgba(255,255,255,0.12)"; e.currentTarget.style.color=WHITE; }
+                  }}
+                  onMouseLeave={function(e){
+                    if (!active) { e.currentTarget.style.background="transparent"; e.currentTarget.style.color="rgba(255,255,255,0.75)"; }
+                  }}>
+                  <span style={{ fontSize:13 }}>{tab.icon}</span>
+                  {tab.label}
                 </button>
               );
             })}
           </div>
         </div>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:7, height:7, borderRadius:"50%", background:TEAL,
-            boxShadow:"0 0 6px "+TEAL }} />
-          <span style={{ fontSize:11, color:FG2, fontFamily:MONO }}>claude-sonnet-4 · Gosu-tuned</span>
-          <div style={{ display:"flex", alignItems:"center", gap:3 }}>
-            <span style={{ fontFamily:"Arial Black, Arial", fontWeight:900, fontSize:12, color:"#003087" }}>NTT</span>
-            <span style={{ fontFamily:"Arial, sans-serif", fontWeight:700, fontSize:10, color:"#003087", letterSpacing:1 }}>DATA</span>
-            <div style={{ width:16, height:2, background:RED, borderRadius:1 }} />
+
+        {/* Right: status + model */}
+        <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+            <div style={{ width:7, height:7, borderRadius:"50%", background:SUCCESS,
+              boxShadow:"0 0 6px "+SUCCESS }} />
+            <span style={{ fontSize:11, color:"rgba(255,255,255,0.55)", fontFamily:MONO }}>
+              claude-sonnet-4 · Gosu-tuned
+            </span>
           </div>
         </div>
       </div>
@@ -600,46 +674,49 @@ setMessages(newMessages.concat({
 
         {/* ── Sidebar ── */}
         {sidebarOpen && (
-          <div style={{ width:220, background:BG1, borderRight:"1px solid "+BG3, display:"flex",
-            flexDirection:"column", overflow:"hidden", flexShrink:0 }}>
-            <div style={{ padding:"14px 14px 8px", fontSize:10, fontWeight:700,
-              color:FG2, fontFamily:MONO, letterSpacing:1 }}>GW MODULES</div>
-            {[
-              { label:"PolicyCenter", icon:"🏛", color:BLUE },
-              { label:"ClaimCenter",  icon:"⚖", color:TEAL },
-              { label:"BillingCenter",icon:"💳", color:GREEN },
-              { label:"PCF / UI",     icon:"🖥", color:ORANGE },
-              { label:"Integration",  icon:"🔗", color:PURPLE },
-              { label:"Cloud Migrate",icon:"☁", color:YELLOW }
-            ].map(function(item) {
+          <div style={{ width:240, background:WHITE, borderRight:"1px solid "+GRAY_200,
+            display:"flex", flexDirection:"column", overflow:"hidden", flexShrink:0 }}>
+
+            <div style={{ padding:"20px 16px 10px", fontSize:11, fontWeight:700,
+              color:NAVY, fontFamily:MONO, letterSpacing:1.5, textTransform:"uppercase" }}>
+              GW Modules
+            </div>
+
+            {gwModules.map(function(item) {
               return (
                 <button key={item.label}
                   onClick={function(){
                     sendMessage("Give me Gosu examples and best practices for Guidewire "+item.label);
                     setActivePanel("chat");
                   }}
-                  style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 14px",
-                    background:"transparent", border:"none", cursor:"pointer",
-                    textAlign:"left", color:FG1, fontSize:12, width:"100%",
-                    borderLeft:"2px solid transparent",
-                    transition:"all 0.15s" }}
-                  onMouseEnter={function(e){ e.target.style.background=BG2; e.target.style.borderLeftColor=item.color; }}
-                  onMouseLeave={function(e){ e.target.style.background="transparent"; e.target.style.borderLeftColor="transparent"; }}>
-                  <span>{item.icon}</span>
+                  style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px",
+                    background:"transparent", border:"none", borderLeft:"3px solid transparent",
+                    cursor:"pointer", textAlign:"left", color:GRAY_700, fontSize:13,
+                    width:"100%", fontFamily:SANS, fontWeight:500, transition:"all 0.15s" }}
+                  onMouseEnter={function(e){
+                    e.currentTarget.style.background=NAVY_LIGHT;
+                    e.currentTarget.style.borderLeftColor=item.color;
+                    e.currentTarget.style.color=NAVY;
+                  }}
+                  onMouseLeave={function(e){
+                    e.currentTarget.style.background="transparent";
+                    e.currentTarget.style.borderLeftColor="transparent";
+                    e.currentTarget.style.color=GRAY_700;
+                  }}>
+                  <span style={{ fontSize:16 }}>{item.icon}</span>
                   <span>{item.label}</span>
                 </button>
               );
             })}
 
-            <div style={{ margin:"12px 14px 8px", borderTop:"1px solid "+BG3 }} />
-            <div style={{ padding:"8px 14px", fontSize:10, fontWeight:700, color:FG2, fontFamily:MONO, letterSpacing:1 }}>QUICK ACTIONS</div>
-            {[
-              { label:"Review my code", icon:"🔍" },
-              { label:"Cloud migration check", icon:"☁" },
-              { label:"Generate unit tests", icon:"🧪" },
-              { label:"Fix null pointer risk", icon:"🛡" },
-              { label:"Explain GW entity", icon:"📖" },
-            ].map(function(a) {
+            <div style={{ margin:"12px 16px", height:1, background:GRAY_200 }} />
+
+            <div style={{ padding:"8px 16px 10px", fontSize:11, fontWeight:700,
+              color:GRAY_400, fontFamily:MONO, letterSpacing:1.5, textTransform:"uppercase" }}>
+              Quick Actions
+            </div>
+
+            {quickActions.map(function(a) {
               return (
                 <button key={a.label}
                   onClick={function(){
@@ -653,11 +730,20 @@ setMessages(newMessages.concat({
                     sendMessage(prompts[a.label] || a.label);
                     setActivePanel("chat");
                   }}
-                  style={{ display:"flex", alignItems:"center", gap:10, padding:"7px 14px",
-                    background:"transparent", border:"none", cursor:"pointer",
-                    textAlign:"left", color:FG2, fontSize:11, width:"100%" }}
-                  onMouseEnter={function(e){ e.currentTarget.style.background=BG2; e.currentTarget.style.color=FG0; }}
-                  onMouseLeave={function(e){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=FG2; }}>
+                  style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 16px",
+                    background:"transparent", border:"none", borderLeft:"3px solid transparent",
+                    cursor:"pointer", textAlign:"left", color:GRAY_500,
+                    fontSize:12, width:"100%", fontFamily:SANS, transition:"all 0.15s" }}
+                  onMouseEnter={function(e){
+                    e.currentTarget.style.background=GRAY_50;
+                    e.currentTarget.style.borderLeftColor=RED;
+                    e.currentTarget.style.color=GRAY_700;
+                  }}
+                  onMouseLeave={function(e){
+                    e.currentTarget.style.background="transparent";
+                    e.currentTarget.style.borderLeftColor="transparent";
+                    e.currentTarget.style.color=GRAY_500;
+                  }}>
                   <span>{a.icon}</span>
                   <span>{a.label}</span>
                 </button>
@@ -665,11 +751,15 @@ setMessages(newMessages.concat({
             })}
 
             <div style={{ flex:1 }} />
-            <div style={{ padding:"12px 14px", borderTop:"1px solid "+BG3 }}>
+
+            <div style={{ padding:"16px", borderTop:"1px solid "+GRAY_200 }}>
               <button onClick={function(){ setMessages([]); }}
-                style={{ width:"100%", padding:"7px", borderRadius:6, border:"1px solid "+BG3,
-                  background:"transparent", color:FG2, fontSize:11, cursor:"pointer" }}>
-                Clear chat
+                style={{ width:"100%", padding:"9px", borderRadius:4,
+                  border:"1px solid "+GRAY_300, background:WHITE, color:GRAY_500,
+                  fontSize:12, cursor:"pointer", fontFamily:SANS, transition:"all 0.15s" }}
+                onMouseEnter={function(e){ e.currentTarget.style.borderColor=RED; e.currentTarget.style.color=RED; }}
+                onMouseLeave={function(e){ e.currentTarget.style.borderColor=GRAY_300; e.currentTarget.style.color=GRAY_500; }}>
+                Clear Conversation
               </button>
             </div>
           </div>
@@ -679,65 +769,87 @@ setMessages(newMessages.concat({
         <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
 
           {/* CHAT PANEL */}
-          {activePanel==="chat" && (
-            <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-              <div style={{ flex:1, overflowY:"auto", padding:"24px 28px" }}>
+          {activePanel === "chat" && (
+            <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background:GRAY_50 }}>
+              <div style={{ flex:1, overflowY:"auto", padding:"28px 32px" }}>
+
                 {messages.length === 0 && (
-                  <div style={{ maxWidth:700, margin:"0 auto", paddingTop:40 }}>
-                    <div style={{ textAlign:"center", marginBottom:40 }}>
-                      <div style={{ fontSize:48, marginBottom:12 }}>⚡</div>
-                      <div style={{ fontSize:28, fontWeight:800, fontFamily:SANS, color:FG0, marginBottom:8 }}>
-                        Gosu <span style={{ color:TEAL }}>Copilot</span>
+                  <div style={{ maxWidth:700, margin:"0 auto", paddingTop:48 }}>
+                    <div style={{ textAlign:"center", marginBottom:48 }}>
+                      <div style={{ width:72, height:72, borderRadius:16,
+                        background:"linear-gradient(135deg, "+NAVY+" 0%, "+NAVY_MID+" 100%)",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        margin:"0 auto 20px", boxShadow:"0 8px 24px rgba(0,48,135,0.25)" }}>
+                        <span style={{ fontSize:30, color:WHITE }}>⚡</span>
                       </div>
-                      <div style={{ fontSize:14, color:FG2, lineHeight:1.6 }}>
-                        AI coding assistant fine-tuned on Guidewire Gosu patterns and idioms.<br/>
+                      <div style={{ fontSize:32, fontWeight:800, color:GRAY_900, marginBottom:12, fontFamily:SANS }}>
+                        Gosu <span style={{ color:NAVY }}>Copilot</span>
+                      </div>
+                      <div style={{ width:48, height:3, background:RED, margin:"0 auto 18px", borderRadius:2 }} />
+                      <div style={{ fontSize:15, color:GRAY_500, lineHeight:1.75, maxWidth:460, margin:"0 auto" }}>
+                        AI coding assistant fine-tuned on Guidewire Gosu patterns and idioms.
                         Ask anything — rules, entities, PCF, integrations, cloud migration.
                       </div>
                     </div>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                       {STARTER_PROMPTS.map(function(p, i) {
                         return (
                           <button key={i} onClick={function(){ sendMessage(p.label); }}
-                            style={{ padding:"14px 16px", borderRadius:10, border:"1px solid "+BG3,
-                              background:BG2, cursor:"pointer", textAlign:"left",
-                              display:"flex", alignItems:"flex-start", gap:10, transition:"border-color 0.2s" }}
-                            onMouseEnter={function(e){ e.currentTarget.style.borderColor=TEAL; }}
-                            onMouseLeave={function(e){ e.currentTarget.style.borderColor=BG3; }}>
-                            <span style={{ fontSize:18, flexShrink:0 }}>{p.icon}</span>
-                            <span style={{ fontSize:12, color:FG1, lineHeight:1.5 }}>{p.label}</span>
+                            style={{ padding:"18px 20px", borderRadius:8,
+                              border:"1px solid "+GRAY_200, background:WHITE,
+                              cursor:"pointer", textAlign:"left",
+                              display:"flex", alignItems:"flex-start", gap:12,
+                              boxShadow:"0 1px 3px rgba(0,0,0,0.06)", transition:"all 0.2s" }}
+                            onMouseEnter={function(e){
+                              e.currentTarget.style.borderColor=NAVY;
+                              e.currentTarget.style.boxShadow="0 4px 16px rgba(0,48,135,0.12)";
+                            }}
+                            onMouseLeave={function(e){
+                              e.currentTarget.style.borderColor=GRAY_200;
+                              e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.06)";
+                            }}>
+                            <span style={{ fontSize:20, flexShrink:0 }}>{p.icon}</span>
+                            <span style={{ fontSize:13, color:GRAY_700, lineHeight:1.55, fontWeight:500 }}>{p.label}</span>
                           </button>
                         );
                       })}
                     </div>
                   </div>
                 )}
+
                 {messages.map(function(msg) {
                   return <MessageBubble key={msg.id} msg={msg} />;
                 })}
+
                 {loading && (
-                  <div style={{ display:"flex", gap:12, marginBottom:20, alignItems:"flex-start" }}>
-                    <div style={{ width:34, height:34, borderRadius:"50%", flexShrink:0,
+                  <div style={{ display:"flex", gap:14, marginBottom:24, alignItems:"flex-start" }}>
+                    <div style={{ width:36, height:36, borderRadius:8, flexShrink:0,
                       display:"flex", alignItems:"center", justifyContent:"center",
-                      background:TEAL+"22", border:"1px solid "+TEAL+"50", fontSize:14 }}>⚡</div>
-                    <div style={{ background:BG1, border:"1px solid "+BG3, borderRadius:"4px 12px 12px 12px",
-                      padding:"14px 18px", display:"flex", gap:6, alignItems:"center" }}>
+                      background:NAVY, color:WHITE, fontSize:11, fontWeight:700, fontFamily:SANS }}>
+                      GC
+                    </div>
+                    <div style={{ background:WHITE, border:"1px solid "+GRAY_200,
+                      borderLeft:"3px solid "+RED, borderRadius:"0 8px 8px 8px",
+                      padding:"16px 20px", display:"flex", gap:6, alignItems:"center",
+                      boxShadow:"0 2px 8px rgba(0,48,135,0.07)" }}>
                       {[0,1,2].map(function(i) {
                         return (
-                          <div key={i} style={{ width:7, height:7, borderRadius:"50%", background:TEAL,
-                            animation:"pulse 1.2s ease-in-out infinite",
-                            animationDelay: i*0.2+"s", opacity:0.7 }} />
+                          <div key={i} style={{ width:8, height:8, borderRadius:"50%", background:NAVY,
+                            animation:"ntt-pulse 1.2s ease-in-out infinite",
+                            animationDelay: i*0.2+"s", opacity:0.6 }} />
                         );
                       })}
-                      <style>{`@keyframes pulse{0%,80%,100%{transform:scale(0.8);opacity:0.4}40%{transform:scale(1.2);opacity:1}}`}</style>
+                      <style>{`@keyframes ntt-pulse{0%,80%,100%{transform:scale(0.75);opacity:0.35}40%{transform:scale(1.15);opacity:1}}`}</style>
                     </div>
                   </div>
                 )}
+
                 <div ref={chatEndRef} />
               </div>
 
               {/* Input area */}
-              <div style={{ padding:"16px 28px", borderTop:"1px solid "+BG3, background:BG1 }}>
-                <div style={{ display:"flex", gap:10, alignItems:"flex-end", maxWidth:900, margin:"0 auto" }}>
+              <div style={{ padding:"20px 32px", borderTop:"1px solid "+GRAY_200, background:WHITE }}>
+                <div style={{ display:"flex", gap:12, alignItems:"flex-end", maxWidth:900, margin:"0 auto" }}>
                   <div style={{ flex:1, position:"relative" }}>
                     <textarea
                       ref={textareaRef}
@@ -746,63 +858,81 @@ setMessages(newMessages.concat({
                       onKeyDown={handleKey}
                       placeholder="Ask Gosu Copilot anything... (Ctrl+Enter to send)"
                       rows={3}
-                      style={{ width:"100%", background:BG2, border:"1px solid "+BG3,
-                        borderRadius:10, padding:"12px 16px", color:FG0,
-                        fontSize:13, fontFamily:SANS, resize:"none", outline:"none",
-                        lineHeight:1.5, transition:"border-color 0.2s" }}
-                      onFocus={function(e){ e.target.style.borderColor=TEAL; }}
-                      onBlur={function(e){ e.target.style.borderColor=BG3; }}
+                      style={{ width:"100%", background:WHITE, border:"1.5px solid "+GRAY_300,
+                        borderRadius:6, padding:"12px 16px", color:GRAY_900,
+                        fontSize:14, fontFamily:SANS, resize:"none", outline:"none",
+                        lineHeight:1.6, transition:"border-color 0.2s" }}
+                      onFocus={function(e){ e.target.style.borderColor=NAVY; }}
+                      onBlur={function(e){ e.target.style.borderColor=GRAY_300; }}
                     />
                   </div>
                   <button onClick={function(){ sendMessage(); }}
                     disabled={!input.trim() || loading}
-                    style={{ padding:"12px 22px", borderRadius:10, border:"none",
-                      background: input.trim()&&!loading ? TEAL : BG3,
-                      color: input.trim()&&!loading ? BG0 : FG2,
-                      fontSize:13, fontWeight:700, cursor: input.trim()&&!loading ? "pointer" : "not-allowed",
-                      transition:"all 0.2s", height:72, fontFamily:SANS }}>
-                    {loading ? "..." : "Send ⚡"}
+                    style={{ padding:"12px 24px", borderRadius:6, border:"none",
+                      background: input.trim()&&!loading ? NAVY : GRAY_200,
+                      color: input.trim()&&!loading ? WHITE : GRAY_400,
+                      fontSize:14, fontWeight:600,
+                      cursor: input.trim()&&!loading ? "pointer" : "not-allowed",
+                      transition:"all 0.2s", height:78, minWidth:100, fontFamily:SANS }}
+                    onMouseEnter={function(e){
+                      if (input.trim()&&!loading) e.currentTarget.style.background=NAVY_DARK;
+                    }}
+                    onMouseLeave={function(e){
+                      if (input.trim()&&!loading) e.currentTarget.style.background=NAVY;
+                    }}>
+                    {loading ? "···" : "Send →"}
                   </button>
                 </div>
-                <div style={{ textAlign:"center", marginTop:8, fontSize:10, color:FG2, fontFamily:MONO }}>
-                  Ctrl+Enter to send · Fine-tuned on GW InsuranceSuite Gosu · Context-aware for PC · CC · BC
+                <div style={{ textAlign:"center", marginTop:10, fontSize:11, color:GRAY_400, fontFamily:MONO }}>
+                  Ctrl+Enter to send · Fine-tuned on GW InsuranceSuite Gosu · PC · CC · BC
                 </div>
               </div>
             </div>
           )}
 
           {/* CODE EDITOR PANEL */}
-          {activePanel==="editor" && (
-            <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", padding:"20px 28px" }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+          {activePanel === "editor" && (
+            <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", padding:"24px 32px", background:GRAY_50 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
                 <div>
-                  <div style={{ fontSize:16, fontWeight:800, color:FG0, marginBottom:3 }}>Gosu Code Editor</div>
-                  <div style={{ fontSize:12, color:FG2 }}>Paste your Gosu code — ask Copilot to review, refactor, or extend it</div>
+                  <div style={{ fontSize:18, fontWeight:700, color:GRAY_900, marginBottom:4 }}>Gosu Code Editor</div>
+                  <div style={{ fontSize:13, color:GRAY_500 }}>Paste your Gosu code — ask Copilot to review, refactor, or extend it</div>
                 </div>
-                <div style={{ display:"flex", gap:8 }}>
+                <div style={{ display:"flex", gap:10 }}>
                   <button onClick={reviewCode}
-                    style={{ padding:"8px 18px", borderRadius:8, border:"1px solid "+BG3,
-                      background:BG2, color:FG1, fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                    style={{ padding:"9px 20px", borderRadius:5, border:"1.5px solid "+GRAY_300,
+                      background:WHITE, color:GRAY_700, fontSize:13, fontWeight:600,
+                      cursor:"pointer", fontFamily:SANS, transition:"all 0.15s" }}
+                    onMouseEnter={function(e){ e.currentTarget.style.borderColor=NAVY; e.currentTarget.style.color=NAVY; }}
+                    onMouseLeave={function(e){ e.currentTarget.style.borderColor=GRAY_300; e.currentTarget.style.color=GRAY_700; }}>
                     🔍 Review
                   </button>
                   <button onClick={refactorCode}
-                    style={{ padding:"8px 18px", borderRadius:8, border:"none",
-                      background:TEAL, color:BG0, fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                    style={{ padding:"9px 20px", borderRadius:5, border:"none",
+                      background:NAVY, color:WHITE, fontSize:13, fontWeight:700,
+                      cursor:"pointer", fontFamily:SANS, transition:"background 0.15s" }}
+                    onMouseEnter={function(e){ e.currentTarget.style.background=NAVY_DARK; }}
+                    onMouseLeave={function(e){ e.currentTarget.style.background=NAVY; }}>
                     ⚡ Refactor
                   </button>
                 </div>
               </div>
-              <div style={{ flex:1, borderRadius:10, border:"1px solid "+BG3, overflow:"hidden", display:"flex", flexDirection:"column" }}>
-                <div style={{ background:BG3, padding:"7px 16px", display:"flex", gap:6, alignItems:"center" }}>
-                  <div style={{ width:10, height:10, borderRadius:"50%", background:"#FF5F57" }} />
-                  <div style={{ width:10, height:10, borderRadius:"50%", background:"#FEBC2E" }} />
-                  <div style={{ width:10, height:10, borderRadius:"50%", background:"#28C840" }} />
-                  <span style={{ marginLeft:10, fontSize:11, color:FG2, fontFamily:MONO }}>MyExtension.gs · Gosu</span>
+
+              <div style={{ flex:1, borderRadius:8, border:"1px solid "+GRAY_200, overflow:"hidden",
+                display:"flex", flexDirection:"column", boxShadow:"0 2px 8px rgba(0,0,0,0.08)" }}>
+                <div style={{ background:"#21262D", padding:"8px 16px", display:"flex", gap:6, alignItems:"center",
+                  borderBottom:"1px solid #30363D" }}>
+                  <div style={{ width:11, height:11, borderRadius:"50%", background:"#FF5F57" }} />
+                  <div style={{ width:11, height:11, borderRadius:"50%", background:"#FEBC2E" }} />
+                  <div style={{ width:11, height:11, borderRadius:"50%", background:"#28C840" }} />
+                  <span style={{ marginLeft:10, fontSize:11, color:SYN_CMT, fontFamily:MONO }}>
+                    MyExtension.gs · Gosu
+                  </span>
                 </div>
                 <textarea
                   value={editorCode}
                   onChange={function(e){ setEditorCode(e.target.value); }}
-                  style={{ flex:1, background:"#0A0E14", border:"none", color:FG0,
+                  style={{ flex:1, background:CODE_BG, border:"none", color:CODE_FG,
                     fontFamily:MONO, fontSize:13, lineHeight:1.7, padding:"16px",
                     resize:"none", outline:"none", tabSize:2 }}
                   spellCheck={false}
@@ -812,21 +942,30 @@ setMessages(newMessages.concat({
           )}
 
           {/* SNIPPETS PANEL */}
-          {activePanel==="snippets" && (
-            <div style={{ flex:1, overflow:"hidden", display:"flex", flexDirection:"column", padding:"20px 28px" }}>
-              <div style={{ marginBottom:16 }}>
-                <div style={{ fontSize:16, fontWeight:800, color:FG0, marginBottom:3 }}>Gosu Snippet Library</div>
-                <div style={{ fontSize:12, color:FG2, marginBottom:14 }}>Production-ready Gosu patterns for Guidewire InsuranceSuite</div>
-                <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+          {activePanel === "snippets" && (
+            <div style={{ flex:1, overflow:"hidden", display:"flex", flexDirection:"column", padding:"24px 32px", background:GRAY_50 }}>
+              <div style={{ marginBottom:20 }}>
+                <div style={{ fontSize:18, fontWeight:700, color:GRAY_900, marginBottom:4 }}>Gosu Snippet Library</div>
+                <div style={{ fontSize:13, color:GRAY_500, marginBottom:16 }}>
+                  Production-ready Gosu patterns for Guidewire InsuranceSuite
+                </div>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                   {CATEGORIES.map(function(cat) {
                     var active = snippetFilter === cat;
                     return (
                       <button key={cat} onClick={function(){ setSnippetFilter(cat); }}
-                        style={{ padding:"4px 14px", borderRadius:20,
-                          border:"1px solid "+(active?TEAL:BG3),
-                          background:active?TEAL+"18":BG2,
-                          color:active?TEAL:FG2, fontSize:11,
-                          fontWeight:active?700:400, cursor:"pointer", fontFamily:MONO }}>
+                        style={{ padding:"5px 16px", borderRadius:20,
+                          border:"1.5px solid "+(active ? NAVY : GRAY_300),
+                          background: active ? NAVY : WHITE,
+                          color: active ? WHITE : GRAY_500,
+                          fontSize:12, fontWeight: active ? 700 : 500,
+                          cursor:"pointer", fontFamily:SANS, transition:"all 0.15s" }}
+                        onMouseEnter={function(e){
+                          if (!active) { e.currentTarget.style.borderColor=NAVY; e.currentTarget.style.color=NAVY; }
+                        }}
+                        onMouseLeave={function(e){
+                          if (!active) { e.currentTarget.style.borderColor=GRAY_300; e.currentTarget.style.color=GRAY_500; }
+                        }}>
                         {cat}
                       </button>
                     );
@@ -851,6 +990,7 @@ setMessages(newMessages.concat({
               </div>
             </div>
           )}
+
         </div>
       </div>
     </div>
